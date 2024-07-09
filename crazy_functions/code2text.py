@@ -101,6 +101,8 @@ def clip_this_iteration_file_manifest(force, this_iteration_file_manifest, gpt_r
         # 把“请对下面的程序文件做一个概述” 替换成 精简的 "文件名：{all_file[index]}"
     for index, content in enumerate(this_iteration_gpt_response_collection):
         if index%2==0: this_iteration_gpt_response_collection[index] = f"{file_rel_path[index//2]}" # 只保留文件名节省token
+    # print(this_iteration_gpt_response_collection)
+    # exit()
     this_iteration_files = this_iteration_file_manifest
     previous_iteration_files.extend(this_iteration_files)
     previous_iteration_files = list(set(previous_iteration_files))
@@ -114,7 +116,7 @@ def clip_this_iteration_file_manifest(force, this_iteration_file_manifest, gpt_r
     if tokens < max_token_limit or force: # 至少要有一组输入
         return previous_iteration_files, current_iteration_focus, this_iteration_gpt_response_collection, i_say, this_iteration_files
     else: 
-        return previous_iteration_files, None, None, None, None
+        return previous_iteration_files, None, [], i_say, []
 
 def 解析源代码新(file_manifest, project_folder, llm_kwargs, plugin_kwargs, history, system_prompt):
     import os, copy
@@ -157,8 +159,10 @@ def 解析源代码新(file_manifest, project_folder, llm_kwargs, plugin_kwargs,
         #     else:
         #         if simple_name in func_use[name] and any(func in func_dec[simple_name] for func in func_use[name][simple_name]):
         #             related_file.append(name)
+ 
         related_file.insert(0, simple_name)
         related_file = list(set(related_file))
+        # print(related_file)
         # print(related_file)
         related_files.append(related_file)
         prefix = "接下来请你逐文件分析下面的工程" if index==0 else ""
@@ -171,6 +175,7 @@ def 解析源代码新(file_manifest, project_folder, llm_kwargs, plugin_kwargs,
         sys_prompt_array.append("你是一个程序架构分析师，正在分析一个源代码项目。你的回答必须简单明了。")
     # exit()
     # 文件读取完成，对每一个源代码文件，生成一个请求线程，发送到chatgpt进行分析
+    # print(related_files)
     gpt_response_collection = request_gpt_model_multi_threads_with_very_awesome_ui_and_high_efficiency(
         inputs_array = inputs_array,
         inputs_show_user_array = inputs_show_user_array,
@@ -208,10 +213,10 @@ def 解析源代码新(file_manifest, project_folder, llm_kwargs, plugin_kwargs,
                 if current_iteration_focus is None:
                     if len(this_iteration_file_manifest) == 0:
                         force = True
-                        previous_iteration_files, current_iteration_focus, this_iteration_gpt_response_collection, i_say, this_iteration_files = clip_this_iteration_file_manifest(force, this_iteration_file_manifest, gpt_response_collection, all_file_rel_path, previous_iteration_files, summary_batch_isolation, max_token_limit=2500)
+                        _, current_iteration_focus, this_iteration_gpt_response_collection, i_say, this_iteration_files = clip_this_iteration_file_manifest(force, tmp_list, gpt_response_collection, all_file_rel_path, previous_iteration_files, summary_batch_isolation, max_token_limit=2500)
                         force = False
                     else:
-                        previous_iteration_files, current_iteration_focus, this_iteration_gpt_response_collection, i_say, this_iteration_files = clip_this_iteration_file_manifest(force, this_iteration_file_manifest, gpt_response_collection, all_file_rel_path, previous_iteration_files, summary_batch_isolation, max_token_limit=2500)
+                        _, current_iteration_focus, this_iteration_gpt_response_collection, i_say, this_iteration_files = clip_this_iteration_file_manifest(force, this_iteration_file_manifest, gpt_response_collection, all_file_rel_path, previous_iteration_files, summary_batch_isolation, max_token_limit=2500)
                     break
                 else:
                     this_iteration_file_manifest = copy.deepcopy(tmp_list)
